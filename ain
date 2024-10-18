@@ -1,0 +1,200 @@
+import java.util.ArrayList;
+import java.util.List;
+
+// Enum for Child Account Type
+enum ChildAccountType {
+    KID, CUSTOMER
+}
+
+// Enum for Parent Account Type
+enum ParentAccountType {
+    STORE, PARENT
+}
+
+// Define an Event class to encapsulate event details
+class Event {
+    public enum EventType {
+        EARN, SPEND, SAVE, BUY, REDEEM
+    }
+
+    private final EventType type; // Type of the event
+    private final double amount; // Amount associated with the event
+
+    public Event(EventType type, double amount) {
+        this.type = type;
+        this.amount = amount;
+    }
+
+    public EventType getType() {
+        return type;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+}
+
+// Interface for balance operation strategy
+interface BalanceOperation {
+    void execute(ChildAccount account, Event event);
+}
+
+// Strategy for handling events related to kids
+class KidBalanceOperation implements BalanceOperation {
+    @Override
+    public void execute(ChildAccount account, Event event) {
+        switch (event.getType()) {
+            case EARN:
+                account.increaseBalance(event.getAmount());
+                break;
+            case SPEND:
+                account.decreaseBalance(event.getAmount());
+                break;
+            case SAVE:
+                account.increaseBalance(event.getAmount());
+                break;
+            default:
+                System.out.println("Invalid event type for KidAccount: " + event.getType());
+        }
+    }
+}
+
+// Strategy for handling events related to store
+class StoreBalanceOperation implements BalanceOperation {
+    @Override
+    public void execute(ChildAccount account, Event event) {
+        switch (event.getType()) {
+            case BUY:
+                account.increaseBalance(event.getAmount());
+                break;
+            case REDEEM:
+                account.decreaseBalance(event.getAmount());
+                break;
+            default:
+                System.out.println("Invalid event type for StoreAccount: " + event.getType());
+        }
+    }
+}
+
+// Abstract class representing a generic account
+abstract class GenericAccount {
+    private String name;
+    private List<GenericAccount> linkedAccounts;
+
+    public GenericAccount(String name) {
+        this.name = name;
+        this.linkedAccounts = new ArrayList<>();
+    }
+
+    public void linkAccount(GenericAccount account) {
+        linkedAccounts.add(account);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void showSummary() {
+        System.out.println("Account Name: " + name);
+        System.out.println("Linked Accounts: " + linkedAccounts.size());
+    }
+}
+
+// ChildAccount class handling kids and customers
+class ChildAccount extends GenericAccount {
+    private final ChildAccountType type;
+    private double balance;
+    private BalanceOperation balanceOperation; // This will hold the appropriate operation strategy
+
+    public ChildAccount(String name, ChildAccountType type) {
+        super(name);
+        this.type = type;
+        this.balance = 0.0;
+
+        // Set the appropriate balance operation based on the account type
+        this.balanceOperation = (type == ChildAccountType.KID) ? new KidBalanceOperation() : new StoreBalanceOperation();
+    }
+
+    public void processEvent(Event event) {
+        balanceOperation.execute(this, event);
+    }
+
+    public void increaseBalance(double amount) {
+        this.balance += amount;
+        System.out.println("Added " + amount + " to " + getName() + ". New Balance: " + balance);
+    }
+
+    public void decreaseBalance(double amount) {
+        if (this.balance >= amount) {
+            this.balance -= amount;
+            System.out.println("Subtracted " + amount + " from " + getName() + ". New Balance: " + balance);
+        } else {
+            System.out.println("Insufficient balance to subtract " + amount + " from " + getName());
+        }
+    }
+
+    public ChildAccountType getType() {
+        return type;
+    }
+
+    @Override
+    public void showSummary() {
+        super.showSummary();
+        System.out.println("Balance: " + balance);
+        System.out.println("Child Type: " + type);
+    }
+}
+
+// ParentAccount class for parents and store owners
+class ParentAccount extends GenericAccount {
+    private final ParentAccountType type;
+
+    public ParentAccount(String name, ParentAccountType type) {
+        super(name);
+        this.type = type;
+    }
+
+    public ParentAccountType getType() {
+        return type;
+    }
+
+    @Override
+    public void showSummary() {
+        super.showSummary();
+        System.out.println("Parent Account Type: " + type);
+    }
+}
+
+// Main class to simulate the system
+public class Main {
+    public static void main(String[] args) {
+        // Create parent account for parents
+        ParentAccount parentAccount = new ParentAccount("John Doe", ParentAccountType.PARENT);
+        
+        // Create store account
+        ParentAccount storeAccount = new ParentAccount("ABC Stores", ParentAccountType.STORE);
+
+        // Create child accounts
+        ChildAccount childAccount1 = new ChildAccount("Ashish", ChildAccountType.KID);
+        ChildAccount childAccount2 = new ChildAccount("Kriti", ChildAccountType.KID);
+        
+        // Link accounts
+        parentAccount.linkAccount(childAccount1);
+        parentAccount.linkAccount(childAccount2);
+        
+        // Process events for kids
+        childAccount1.processEvent(new Event(Event.EventType.EARN, 50.0)); // Earn $50 for chore
+        childAccount2.processEvent(new Event(Event.EventType.SAVE, 30.0)); // Save $30
+        childAccount1.processEvent(new Event(Event.EventType.SPEND, 20.0)); // Spend $20
+        childAccount2.processEvent(new Event(Event.EventType.SPEND, 40.0)); // Attempt to spend $40 (insufficient funds)
+
+        // Process events for store
+        storeAccount.processEvent(new Event(Event.EventType.BUY, 100.0)); // Buy for $100
+        storeAccount.processEvent(new Event(Event.EventType.REDEEM, 50.0)); // Redeem $50
+        
+        // Show summaries
+        parentAccount.showSummary();
+        childAccount1.showSummary();
+        childAccount2.showSummary();
+    }
+}
